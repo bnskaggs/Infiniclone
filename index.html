@@ -982,6 +982,19 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
         modal.appendChild(testBtn);
         const footer = document.createElement("div");
         footer.className = "modal-footer";
+        const resetRecipesBtn = document.createElement("button");
+        resetRecipesBtn.type = "button";
+        resetRecipesBtn.textContent = "Reset Recipes";
+        resetRecipesBtn.addEventListener("click", () => {
+          if (!confirm("Reset all custom recipes? This cannot be undone.")) return;
+          pushUndo();
+          userRecipes = {};
+          saveState();
+          renderAll();
+          showToast("Recipes reset to defaults");
+          closeModal();
+        });
+        footer.appendChild(resetRecipesBtn);
         const closeBtn = document.createElement("button");
         closeBtn.textContent = "Close";
         closeBtn.addEventListener("click", () => {
