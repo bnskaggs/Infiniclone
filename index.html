@@ -308,7 +308,17 @@
       "Plant+Fire":"Ash",
       "Plant+Mud":"Swamp",
       "Energy+Swamp":"Life",
-      "Life+Stone":"Fossil",
+      "Life+Stone":"Tool",
+      "Life+Tool":"Human",
+      "Human+Life":"Human Being",
+      "Human+Stone":"Cave",
+      "Human+House":"Village",
+      "Village+Village":"City",
+      "City+Tool":"Civilization",
+      "Human+Tool":"Worker",
+      "Human+Fire":"Cooking",
+      "Cooking+Tool":"Agriculture",
+      "Agriculture+Human":"Farmer",
       "Life+Energy":"Evolution",
       "Glass+Energy":"Lightbulb",
       "Stone+Stone":"Wall",
@@ -317,7 +327,7 @@
     };
     function keyFor(a,b){ return [a,b].sort().join("+"); }
 
-    function normalizeName(name) {
+    function normalizeName(name, aName, bName) {
       if (!name) return null;
       let clean = name.trim();
 
@@ -328,10 +338,16 @@
       // Reject overly long names
       if (clean.length > 24) return null;
 
-      // Reject mashups or invalid formats
-      if (!/^[A-Z][a-z]+(?:\s[A-Z][a-z]+)?$/.test(clean)) {
-        return null;
-      }
+      // Reject trivial mashups
+      const lowerClean = clean.toLowerCase();
+      const lowerA = (aName || "").toLowerCase();
+      const lowerB = (bName || "").toLowerCase();
+      if (lowerClean === (lowerA + lowerB)) return null;
+      if (lowerClean === (lowerB + lowerA)) return null;
+      if (lowerA && lowerB && lowerClean.includes(lowerA) && lowerClean.includes(lowerB)) return null;
+
+      // Must be 1–2 words, each capitalized
+      if (!/^[A-Z][a-z]+(?:\s[A-Z][a-z]+)?$/.test(clean)) return null;
 
       return clean;
     }
@@ -348,17 +364,19 @@
           {
             role: "system",
             content: `You are a creative but disciplined crafting game alchemist.
-When given two element names, propose a SINGLE new element that is:
+When given two element names, propose ONE new element that:
 
-- Intuitive and grounded in real-world concepts (natural science, materials, mythology, or everyday objects).
-- Concise: 1–2 words only. Use Title Case (e.g., "Volcano", not "volcano" or "earthhome").
-- No nonsense mashups, duplicates, or invented gibberish.
-- Avoid overly abstract ideas (e.g., "Essence of Being").
-- Avoid proper nouns, trademarks, brands, places, or characters.
-- If the combo feels meaningless, return:
+- Must be a meaningful concept from the natural world, basic science, mythology, or everyday objects. 
+- Must be concise (1–2 words), in Title Case (e.g., "Volcano", not "volcano", "emberdust", or "Wallhouse").
+- DO NOT produce simple mashups of the inputs (e.g., "Emberdust", "Wallhouse").
+- DO NOT repeat inputs (e.g., "Ember", "House").
+- Favor results that feel like a natural consequence of the inputs.
+- If combining relates to life, growth, or biology, prefer results that progress toward "Human" or "Human Being".
+- Avoid proper nouns, trademarks, brands, places, or copyrighted characters.
+- If the combo has no clear meaning, return:
   {"result": null, "confidence": 0.0, "reason": "no meaningful combo"}
 
-Always respond with strict JSON:
+Respond ONLY with strict JSON:
 {"result":"<NewElementName or null>","confidence":0.0-1.0,"reason":"<short why>"}`
           },
           {
@@ -404,7 +422,7 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
           return null;
         }
 
-        const normalized = normalizeName(parsed?.result);
+        const normalized = normalizeName(parsed?.result, aName, bName);
         if (!normalized) {
           return null;
         }
@@ -461,6 +479,17 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
       "Ash":"🕯️",
       "Swamp":"🦆",
       "Life":"🌿",
+      "Tool":"🛠️",
+      "Human":"🧑",
+      "Human Being":"🧑‍🤝‍🧑",
+      "Cave":"🪨",
+      "Village":"🏘️",
+      "City":"🏙️",
+      "Civilization":"🏛️",
+      "Worker":"👷",
+      "Cooking":"🍳",
+      "Agriculture":"🌾",
+      "Farmer":"👨‍🌾",
       "Fossil":"🦴",
       "Evolution":"🧬",
       "Lightbulb":"💡",
