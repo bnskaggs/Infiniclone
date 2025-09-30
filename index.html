@@ -317,6 +317,25 @@
     };
     function keyFor(a,b){ return [a,b].sort().join("+"); }
 
+    function normalizeName(name) {
+      if (!name) return null;
+      let clean = name.trim();
+
+      // Title Case
+      clean = clean.replace(/\s+/g, " ");
+      clean = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+
+      // Reject overly long names
+      if (clean.length > 24) return null;
+
+      // Reject mashups or invalid formats
+      if (!/^[A-Z][a-z]+(?:\s[A-Z][a-z]+)?$/.test(clean)) {
+        return null;
+      }
+
+      return clean;
+    }
+
     async function llmSuggestCombination(aName, bName, settings) {
       if (!settings.llm.apiKey) {
         console.warn("No API key set for LLM");
@@ -324,17 +343,23 @@
       }
 
       const body = {
-        model: settings.llm.model || "gpt-4-mini",
+        model: settings.llm.model || "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: `You are a constrained game alchemist. Given two element names from a crafting game, propose a single, sensible combined result if it’s culturally neutral, concise (1–2 words), and feels intuitive. Output strictly in JSON only.
+            content: `You are a creative but disciplined crafting game alchemist.
+When given two element names, propose a SINGLE new element that is:
 
-Return:
-{"result":"<NewElementName>","confidence":0.0-1.0,"reason":"<short why>"}
+- Intuitive and grounded in real-world concepts (natural science, materials, mythology, or everyday objects).
+- Concise: 1–2 words only. Use Title Case (e.g., "Volcano", not "volcano" or "earthhome").
+- No nonsense mashups, duplicates, or invented gibberish.
+- Avoid overly abstract ideas (e.g., "Essence of Being").
+- Avoid proper nouns, trademarks, brands, places, or characters.
+- If the combo feels meaningless, return:
+  {"result": null, "confidence": 0.0, "reason": "no meaningful combo"}
 
-If there is no meaningful combo, return:
-{"result":null,"confidence":0.0,"reason":"no meaningful combo"}`
+Always respond with strict JSON:
+{"result":"<NewElementName or null>","confidence":0.0-1.0,"reason":"<short why>"}`
           },
           {
             role: "user",
@@ -371,12 +396,20 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
         if (!raw) return null;
 
         let parsed;
-        try { const unwrapped = raw.replace(/^```(?:json)?\s*|\s*```$/g, '');
-      parsed = JSON.parse(unwrapped); }
-        catch { console.error("Failed to parse LLM JSON", raw); return null; }
+        try {
+          const unwrapped = raw.replace(/^```(?:json)?\s*|\s*```$/g, "");
+          parsed = JSON.parse(unwrapped);
+        } catch {
+          console.error("Failed to parse LLM JSON", raw);
+          return null;
+        }
 
-        if (parsed && typeof parsed.result === "string") return parsed;
-        return null;
+        const normalized = normalizeName(parsed?.result);
+        if (!normalized) {
+          return null;
+        }
+
+        return { ...parsed, result: normalized };
       } catch (err) {
         console.error("LLM error", err);
         return null;
@@ -395,7 +428,7 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
         llm: {
           baseUrl: "https://api.openai.com/v1",
           apiKey: "",
-          model: "gpt-4-mini",
+          model: "gpt-4o-mini",
           temperature: 0.2,
           autoAdd: true
         }
