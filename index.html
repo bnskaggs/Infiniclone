@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Infinite Craft Clone</title>
+  <style>
+    :root {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: #222;
+      background: #f5f5f7;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #eef0f4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    button, input, select, textarea {
+      font: inherit;
+    }
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      background: #fff;
+      border-bottom: 1px solid #d0d4dc;
+      padding: 0.5rem 1rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header button {
+      background: #1e88e5;
+      color: white;
+      border: none;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    header button:hover {
+      background: #1565c0;
+    }
+    header button.secondary {
+      background: #e0e3ea;
+      color: #222;
+    }
+    header button.secondary:hover {
+      background: #c9ced9;
+    }
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 240px 1fr 240px;
+      gap: 1rem;
+      padding: 1rem;
+      overflow: hidden;
+    }
+    aside, .board-wrapper {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(15,23,42,0.08);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .board-wrapper {
+      overflow: hidden;
+      position: relative;
+    }
+    #board {
+      flex: 1;
+      background: linear-gradient(135deg, #f8fafc 25%, #eef2f7 75%);
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+      min-height: 480px;
+    }
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .palette-search {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .palette-search input {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #cdd5e0;
+      border-radius: 6px;
+    }
+    .palette-list, .discovered-list {
+      overflow-y: auto;
+      margin-top: 0.5rem;
+      padding-right: 0.25rem;
+    }
+    .palette-list button,
+    .discovered-list button {
+      width: 100%;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: #f3f5fa;
+      text-align: left;
+      cursor: pointer;
+      margin-bottom: 0.3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .palette-list button:hover,
+    .discovered-list button:hover {
+      border-color: #1e88e5;
+      background: #e3f2fd;
+    }
+    .tile {
+      position: absolute;
+      min-width: 100px;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #d0d5df;
+      box-shadow: 0 4px 10px rgba(15,23,42,0.15);
+      cursor: grab;
+      user-select: none;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      transition: box-shadow 0.2s;
+    }
+    .tile:active {
+      cursor: grabbing;
+      box-shadow: 0 6px 18px rgba(15,23,42,0.25);
+    }
+    .tile-name {
+      font-weight: 600;
+    }
+    .tile-emoji {
+      font-size: 1.4rem;
+    }
+    .toast-container {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 999;
+    }
+    .toast {
+      background: #1e88e5;
+      color: white;
+      padding: 0.6rem 0.9rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(15,23,42,0.2);
+      animation: fadein 0.2s ease-out;
+    }
+    .toast.miss {
+      background: #ef5350;
+    }
+    @keyframes fadein {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      z-index: 1000;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: min(600px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 32px rgba(15,23,42,0.25);
+    }
+    .modal h2 {
+      margin-top: 0;
+    }
+    .modal-footer {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+    .hidden {
+      display: none !important;
+    }
+    form.settings-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .settings-grid label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.95rem;
+    }
+    .inline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      resize: vertical;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #cdd5e0;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+    }
+    .empty-state {
+      margin: auto;
+      color: #6b7280;
+      font-style: italic;
+    }
+    @media (max-width: 1100px) {
+      main {
+        grid-template-columns: 220px 1fr;
+        grid-template-areas: "left top" "left board";
+      }
+    }
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        gap: 0.75rem;
+      }
+      aside, .board-wrapper {
+        min-height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <button id="undoBtn" class="secondary">Undo</button>
+      <button id="redoBtn" class="secondary">Redo</button>
+      <button id="clearBtn" class="secondary">Clear Board</button>
+      <button id="exportBtn">Export</button>
+      <button id="importBtn" class="secondary">Import</button>
+      <button id="settingsBtn" class="secondary">Settings</button>
+    </header>
+    <main>
+      <aside>
+        <div class="panel-title">Palette</div>
+        <div class="palette-search">
+          <input id="paletteSearch" type="search" placeholder="Search elements" />
+          <div class="palette-list" id="paletteList"></div>
+        </div>
+      </aside>
+      <div class="board-wrapper">
+        <div class="panel-title">Board</div>
+        <div id="board"></div>
+      </div>
+      <aside>
+        <div class="panel-title">Discovered</div>
+        <div class="discovered-list" id="discoveredList"></div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div id="modalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <script>
+    const RECIPES = {
+      "Air+Earth":"Dust",
+      "Air+Fire":"Energy",
+      "Air+Water":"Rain",
+      "Earth+Fire":"Lava",
+      "Lava+Water":"Stone",
+      "Stone+Air":"Sand",
+      "Sand+Fire":"Glass",
+      "Water+Fire":"Steam",
+      "Water+Earth":"Mud",
+      "Rain+Earth":"Plant",
+      "Plant+Fire":"Ash",
+      "Plant+Mud":"Swamp",
+      "Energy+Swamp":"Life",
+      "Life+Stone":"Fossil",
+      "Life+Energy":"Evolution",
+      "Glass+Energy":"Lightbulb",
+      "Stone+Stone":"Wall",
+      "Wall+Wall":"House",
+      "House+Energy":"Smart Home"
+    };
+    function keyFor(a,b){ return [a,b].sort().join("+"); }
+
+    async function llmSuggestCombination(aName, bName, settings) {
+      if (!settings.llm.apiKey) {
+        console.warn("No API key set for LLM");
+        return null;
+      }
+
+      const body = {
+        model: settings.llm.model || "gpt-4-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a constrained game alchemist. Given two element names from a crafting game, propose a single, sensible combined result if it’s culturally neutral, concise (1–2 words), and feels intuitive. Output strictly in JSON only.
+
+Return:
+{"result":"<NewElementName>","confidence":0.0-1.0,"reason":"<short why>"}
+
+If there is no meaningful combo, return:
+{"result":null,"confidence":0.0,"reason":"no meaningful combo"}`
+          },
+          {
+            role: "user",
+            content: `Elements:
+A = "${aName}"
+B = "${bName}"
+Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no unsafe content.`
+          }
+        ],
+        temperature: settings.llm.temperature ?? 0.2,
+        max_tokens: 100
+      };
+
+      try {
+        const res = await fetch(settings.llm.baseUrl || "https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + settings.llm.apiKey
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          console.error("LLM request failed", res.status, await res.text());
+          return null;
+        }
+
+        const data = await res.json();
+        const raw = data.choices?.[0]?.message?.content?.trim();
+        if (!raw) return null;
+
+        let parsed;
+        try { parsed = JSON.parse(raw); }
+        catch { console.error("Failed to parse LLM JSON", raw); return null; }
+
+        if (parsed && typeof parsed.result === "string") return parsed;
+        return null;
+      } catch (err) {
+        console.error("LLM error", err);
+        return null;
+      }
+    }
+
+    const STORAGE_KEY = "ic_state_v1";
+    const RECIPES_KEY = "ic_user_recipes_v1";
+
+    const DEFAULT_STATE = {
+      settings: {
+        consumeOnCombine: false,
+        snapToGrid: true,
+        showEmoji: true,
+        useLLM: true,
+        llm: {
+          baseUrl: "https://api.openai.com/v1",
+          apiKey: "",
+          model: "gpt-4-mini",
+          temperature: 0.2,
+          autoAdd: true
+        }
+      },
+      discovered: ["Water","Fire","Earth","Air"],
+      boardTiles: [],
+      nextId: 1
+    };
+
+    let state = loadState();
+    let userRecipes = loadUserRecipes();
+    let undoStack = [];
+    let redoStack = [];
+
+    const emojiMap = {
+      "Water":"💧",
+      "Fire":"🔥",
+      "Earth":"🌍",
+      "Air":"🌬️",
+      "Dust":"🌫️",
+      "Energy":"⚡",
+      "Rain":"🌧️",
+      "Lava":"🌋",
+      "Stone":"🪨",
+      "Sand":"🏖️",
+      "Glass":"🪟",
+      "Steam":"♨️",
+      "Mud":"🪵",
+      "Plant":"🌱",
+      "Ash":"🕯️",
+      "Swamp":"🦆",
+      "Life":"🌿",
+      "Fossil":"🦴",
+      "Evolution":"🧬",
+      "Lightbulb":"💡",
+      "Wall":"🧱",
+      "House":"🏠",
+      "Smart Home":"🏡"
+    };
+
+    const boardEl = document.getElementById("board");
+    const paletteListEl = document.getElementById("paletteList");
+    const discoveredListEl = document.getElementById("discoveredList");
+    const toastContainer = document.getElementById("toastContainer");
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const modalContent = document.getElementById("modalContent");
+
+    const paletteSearch = document.getElementById("paletteSearch");
+
+    function loadState() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          parsed.settings = Object.assign({}, DEFAULT_STATE.settings, parsed.settings || {});
+          parsed.settings.llm = Object.assign({}, DEFAULT_STATE.settings.llm, parsed.settings?.llm || {});
+          parsed.discovered = Array.from(new Set([
+            ...DEFAULT_STATE.discovered,
+            ...(parsed.discovered || [])
+          ]));
+          parsed.boardTiles = (parsed.boardTiles || []).map(t => ({...t}));
+          parsed.nextId = parsed.nextId || 1;
+          return parsed;
+        }
+      } catch (err) {
+        console.error("Failed to load state", err);
+      }
+      return structuredClone(DEFAULT_STATE);
+    }
+
+    function loadUserRecipes() {
+      try {
+        const stored = localStorage.getItem(RECIPES_KEY);
+        if (stored) return JSON.parse(stored) || {};
+      } catch (err) {
+        console.error("Failed to load recipes", err);
+      }
+      return {};
+    }
+
+    function saveState() {
+      const toSave = {
+        settings: state.settings,
+        discovered: state.discovered,
+        boardTiles: state.boardTiles,
+        nextId: state.nextId
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      localStorage.setItem(RECIPES_KEY, JSON.stringify(userRecipes));
+    }
+
+    function structuredClone(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function pushUndo() {
+      undoStack.push(structuredClone({
+        state,
+        userRecipes
+      }));
+      if (undoStack.length > 100) undoStack.shift();
+      redoStack = [];
+    }
+
+    function restoreSnapshot(snapshot) {
+      state = structuredClone(snapshot.state);
+      userRecipes = structuredClone(snapshot.userRecipes);
+      renderAll();
+      saveState();
+    }
+
+    function undo() {
+      if (!undoStack.length) return;
+      const snapshot = undoStack.pop();
+      redoStack.push(structuredClone({state, userRecipes}));
+      restoreSnapshot(snapshot);
+    }
+
+    function redo() {
+      if (!redoStack.length) return;
+      const snapshot = redoStack.pop();
+      undoStack.push(structuredClone({state, userRecipes}));
+      restoreSnapshot(snapshot);
+    }
+
+    function showToast(message, type = "") {
+      const toast = document.createElement("div");
+      toast.className = "toast" + (type ? " " + type : "");
+      toast.textContent = message;
+      toastContainer.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transition = "opacity 0.3s";
+        setTimeout(() => toast.remove(), 300);
+      }, 2200);
+    }
+
+    function spawnTile(name, position = null, {skipUndo = false} = {}) {
+      if (!skipUndo) pushUndo();
+      const boardRect = boardEl.getBoundingClientRect();
+      const width = boardRect.width || boardEl.clientWidth || 600;
+      const height = boardRect.height || boardEl.clientHeight || 400;
+      const tile = {
+        id: state.nextId++,
+        name,
+        x: position?.x ?? 40 + Math.random() * Math.max(20, width - 140),
+        y: position?.y ?? 40 + Math.random() * Math.max(20, height - 140)
+      };
+      if (state.settings.snapToGrid) {
+        tile.x = Math.round(tile.x / 20) * 20;
+        tile.y = Math.round(tile.y / 20) * 20;
+      }
+      tile.x = Math.max(0, Math.min(Math.max(0, width - 120), tile.x));
+      tile.y = Math.max(0, Math.min(Math.max(0, height - 120), tile.y));
+      state.boardTiles.push(tile);
+      ensureDiscovered(name);
+      renderBoard();
+      saveState();
+    }
+
+    function ensureDiscovered(name) {
+      if (!state.discovered.includes(name)) {
+        state.discovered.push(name);
+        state.discovered.sort((a,b) => a.localeCompare(b));
+        renderDiscovered();
+        showToast(`Discovered ${name}!`);
+      }
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = "";
+      if (!state.boardTiles.length) {
+        const msg = document.createElement("div");
+        msg.className = "empty-state";
+        msg.textContent = "Drag in elements to start crafting.";
+        boardEl.appendChild(msg);
+        return;
+      }
+      state.boardTiles.forEach(tile => {
+        const tileEl = document.createElement("div");
+        tileEl.className = "tile";
+        tileEl.dataset.id = tile.id;
+        tileEl.style.left = tile.x + "px";
+        tileEl.style.top = tile.y + "px";
+
+        const emojiEl = document.createElement("div");
+        emojiEl.className = "tile-emoji";
+        emojiEl.textContent = state.settings.showEmoji ? (emojiMap[tile.name] || "✨") : "";
+        tileEl.appendChild(emojiEl);
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "tile-name";
+        nameEl.textContent = tile.name;
+        tileEl.appendChild(nameEl);
+
+        boardEl.appendChild(tileEl);
+        setupDrag(tileEl);
+      });
+    }
+
+    function renderPalette() {
+      const search = paletteSearch.value.trim().toLowerCase();
+      const all = Array.from(new Set([...DEFAULT_STATE.discovered, ...state.discovered])).sort((a,b)=>a.localeCompare(b));
+      paletteListEl.innerHTML = "";
+      all.filter(name => !search || name.toLowerCase().includes(search)).forEach(name => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = name;
+        btn.addEventListener("click", () => spawnTile(name));
+        paletteListEl.appendChild(btn);
+      });
+    }
+
+    function renderDiscovered() {
+      discoveredListEl.innerHTML = "";
+      state.discovered.sort((a,b) => a.localeCompare(b)).forEach(name => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        const span = document.createElement("span");
+        span.textContent = name;
+        const emojiSpan = document.createElement("span");
+        emojiSpan.textContent = state.settings.showEmoji ? (emojiMap[name] || "✨") : "";
+        btn.appendChild(span);
+        btn.appendChild(emojiSpan);
+        btn.addEventListener("click", () => spawnTile(name));
+        discoveredListEl.appendChild(btn);
+      });
+    }
+
+    function renderAll() {
+      renderPalette();
+      renderDiscovered();
+      renderBoard();
+    }
+
+    function findTileById(id) {
+      return state.boardTiles.find(t => t.id === Number(id));
+    }
+
+    function removeTile(id) {
+      state.boardTiles = state.boardTiles.filter(t => t.id !== Number(id));
+    }
+
+    function combineTiles(tileA, tileB, options = {}) {
+      const { skipUndo = false } = options;
+      const result = findRecipe(tileA.name, tileB.name);
+      if (result) {
+        applyCombination(tileA, tileB, result, false, null, skipUndo);
+        return;
+      }
+      if (!state.settings.useLLM) {
+        showToast("No reaction", "miss");
+        return;
+      }
+      if (!state.settings.llm.apiKey) {
+        showToast("No reaction (add API key)", "miss");
+        return;
+      }
+      showToast("Consulting LLM...", "");
+      llmSuggestCombination(tileA.name, tileB.name, state.settings).then(res => {
+        if (!res || !res.result) {
+          showToast("No reaction", "miss");
+          return;
+        }
+        applyCombination(tileA, tileB, res.result, true, res, skipUndo);
+      });
+    }
+
+    function applyCombination(tileA, tileB, resultName, fromLLM = false, llmData = null, skipUndo = false) {
+      if (!skipUndo) pushUndo();
+      if (state.settings.consumeOnCombine) {
+        removeTile(tileA.id);
+        removeTile(tileB.id);
+      }
+      const target = findTileById(tileB.id) || tileB;
+      const newPos = {
+        x: target.x + 30,
+        y: target.y + 30
+      };
+      spawnTile(resultName, newPos, {skipUndo: true});
+      if (fromLLM && state.settings.llm.autoAdd && resultName) {
+        const key = keyFor(tileA.name, tileB.name);
+        userRecipes[key] = resultName;
+        saveState();
+      }
+      const msg = fromLLM && llmData?.reason ? `${resultName} (${llmData.reason})` : `Created ${resultName}`;
+      showToast(msg);
+    }
+
+    function findRecipe(a, b) {
+      const key = keyFor(a,b);
+      return userRecipes[key] || RECIPES[key] || null;
+    }
+
+    function setupDrag(tileEl) {
+      let startX, startY, offsetX, offsetY, moved = false;
+      const id = tileEl.dataset.id;
+      const onPointerDown = (e) => {
+        e.preventDefault();
+        tileEl.setPointerCapture(e.pointerId);
+        startX = e.clientX;
+        startY = e.clientY;
+        const tile = findTileById(id);
+        offsetX = tile.x;
+        offsetY = tile.y;
+        moved = false;
+        tileEl.style.zIndex = "100";
+      };
+
+      const onPointerMove = (e) => {
+        if (startX === undefined) return;
+        moved = true;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const newX = offsetX + dx;
+        const newY = offsetY + dy;
+        tileEl.style.left = newX + "px";
+        tileEl.style.top = newY + "px";
+      };
+
+      const onPointerUp = (e) => {
+        if (startX === undefined) return;
+        tileEl.releasePointerCapture(e.pointerId);
+        tileEl.style.zIndex = "";
+        const tile = findTileById(id);
+        if (!tile) {
+          startX = undefined;
+          return;
+        }
+        const rect = tileEl.getBoundingClientRect();
+        let x = rect.left - boardEl.getBoundingClientRect().left;
+        let y = rect.top - boardEl.getBoundingClientRect().top;
+        if (state.settings.snapToGrid) {
+          x = Math.round(x / 20) * 20;
+          y = Math.round(y / 20) * 20;
+        }
+        const elements = document.elementsFromPoint(e.clientX, e.clientY);
+        const otherTileEl = elements.find(el => el.classList?.contains("tile") && el.dataset.id !== id);
+        let pushedMoveUndo = false;
+        if (moved) {
+          pushUndo();
+          pushedMoveUndo = true;
+          tile.x = Math.max(0, Math.min(boardEl.clientWidth - tileEl.offsetWidth, x));
+          tile.y = Math.max(0, Math.min(boardEl.clientHeight - tileEl.offsetHeight, y));
+          saveState();
+          renderBoard();
+        }
+
+        if (otherTileEl) {
+          const otherTile = findTileById(otherTileEl.dataset.id);
+          const currentTile = findTileById(id);
+          if (otherTile && currentTile) {
+            combineTiles(currentTile, otherTile, {skipUndo: pushedMoveUndo});
+          }
+        }
+        startX = undefined;
+      };
+
+      tileEl.addEventListener("pointerdown", onPointerDown);
+      tileEl.addEventListener("pointermove", onPointerMove);
+      tileEl.addEventListener("pointerup", onPointerUp);
+      tileEl.addEventListener("pointercancel", onPointerUp);
+    }
+
+    function clearBoard() {
+      if (!state.boardTiles.length) return;
+      pushUndo();
+      state.boardTiles = [];
+      renderBoard();
+      saveState();
+    }
+
+    function openModal(contentBuilder) {
+      modalContent.innerHTML = "";
+      contentBuilder(modalContent);
+      modalBackdrop.classList.remove("hidden");
+    }
+
+    function closeModal() {
+      modalBackdrop.classList.add("hidden");
+      modalContent.innerHTML = "";
+    }
+
+    function openExportModal() {
+      openModal(modal => {
+        const title = document.createElement("h2");
+        title.textContent = "Export State";
+        const textarea = document.createElement("textarea");
+        textarea.value = JSON.stringify({state, userRecipes}, null, 2);
+        modal.appendChild(title);
+        modal.appendChild(textarea);
+        const footer = document.createElement("div");
+        footer.className = "modal-footer";
+        const closeBtn = document.createElement("button");
+        closeBtn.textContent = "Close";
+        closeBtn.addEventListener("click", closeModal);
+        footer.appendChild(closeBtn);
+        modal.appendChild(footer);
+      });
+    }
+
+    function openImportModal() {
+      openModal(modal => {
+        const title = document.createElement("h2");
+        title.textContent = "Import State";
+        const textarea = document.createElement("textarea");
+        textarea.placeholder = "Paste exported JSON here";
+        const footer = document.createElement("div");
+        footer.className = "modal-footer";
+        const importBtn = document.createElement("button");
+        importBtn.textContent = "Import";
+        importBtn.addEventListener("click", () => {
+          try {
+            const parsed = JSON.parse(textarea.value);
+            if (parsed.state) {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed.state));
+            }
+            if (parsed.userRecipes) {
+              localStorage.setItem(RECIPES_KEY, JSON.stringify(parsed.userRecipes));
+            }
+            state = loadState();
+            userRecipes = loadUserRecipes();
+            undoStack = [];
+            redoStack = [];
+            renderAll();
+            showToast("Import successful");
+            closeModal();
+          } catch (err) {
+            alert("Failed to import JSON");
+          }
+        });
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "Cancel";
+        cancelBtn.addEventListener("click", closeModal);
+        footer.appendChild(cancelBtn);
+        footer.appendChild(importBtn);
+        modal.appendChild(title);
+        modal.appendChild(textarea);
+        modal.appendChild(footer);
+      });
+    }
+
+    function openSettingsModal() {
+      openModal(modal => {
+        const title = document.createElement("h2");
+        title.textContent = "Settings";
+        const form = document.createElement("form");
+        form.className = "settings-grid";
+
+        const makeCheckbox = (label, keyPath) => {
+          const wrapper = document.createElement("label");
+          wrapper.className = "checkbox-label";
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.checked = getSetting(keyPath);
+          input.addEventListener("change", () => {
+            pushUndo();
+            setSetting(keyPath, input.checked);
+            saveState();
+            renderAll();
+          });
+          wrapper.appendChild(input);
+          const span = document.createElement("span");
+          span.textContent = label;
+          wrapper.appendChild(span);
+          return wrapper;
+        };
+
+        form.appendChild(makeCheckbox("Consume inputs on combine", ["consumeOnCombine"]));
+        form.appendChild(makeCheckbox("Snap tiles to grid", ["snapToGrid"]));
+        form.appendChild(makeCheckbox("Show emoji on tiles", ["showEmoji"]));
+        form.appendChild(makeCheckbox("Use LLM when recipe missing", ["useLLM"]));
+
+        const autoAddWrapper = makeCheckbox("Auto-add LLM results to recipes", ["llm","autoAdd"]);
+        form.appendChild(autoAddWrapper);
+
+        const baseUrlLabel = document.createElement("label");
+        baseUrlLabel.textContent = "API Base URL";
+        const baseInput = document.createElement("input");
+        baseInput.type = "text";
+        baseInput.value = state.settings.llm.baseUrl;
+        baseInput.addEventListener("change", () => {
+          pushUndo();
+          state.settings.llm.baseUrl = baseInput.value;
+          saveState();
+        });
+        baseUrlLabel.appendChild(baseInput);
+        form.appendChild(baseUrlLabel);
+
+        const keyLabel = document.createElement("label");
+        keyLabel.textContent = "API Key";
+        const keyInput = document.createElement("input");
+        keyInput.type = "password";
+        keyInput.placeholder = "sk-...";
+        keyInput.value = state.settings.llm.apiKey;
+        keyInput.addEventListener("input", () => {
+          state.settings.llm.apiKey = keyInput.value.trim();
+          saveState();
+        });
+        keyLabel.appendChild(keyInput);
+        form.appendChild(keyLabel);
+
+        const modelLabel = document.createElement("label");
+        modelLabel.textContent = "Model";
+        const modelInput = document.createElement("input");
+        modelInput.type = "text";
+        modelInput.value = state.settings.llm.model;
+        modelInput.addEventListener("change", () => {
+          pushUndo();
+          state.settings.llm.model = modelInput.value;
+          saveState();
+        });
+        modelLabel.appendChild(modelInput);
+        form.appendChild(modelLabel);
+
+        const temperatureLabel = document.createElement("label");
+        temperatureLabel.textContent = `Temperature (${state.settings.llm.temperature})`;
+        const tempInput = document.createElement("input");
+        tempInput.type = "range";
+        tempInput.min = "0";
+        tempInput.max = "1";
+        tempInput.step = "0.05";
+        tempInput.value = state.settings.llm.temperature;
+        tempInput.addEventListener("input", () => {
+          const value = Number(tempInput.value);
+          temperatureLabel.textContent = `Temperature (${value})`;
+          state.settings.llm.temperature = value;
+          saveState();
+        });
+        temperatureLabel.appendChild(tempInput);
+        form.appendChild(temperatureLabel);
+
+        const testBtn = document.createElement("button");
+        testBtn.type = "button";
+        testBtn.textContent = "Test LLM";
+        testBtn.addEventListener("click", async () => {
+          testBtn.disabled = true;
+          testBtn.textContent = "Testing...";
+          const res = await llmSuggestCombination("Water","Fire", state.settings);
+          if (res && res.result) {
+            showToast(`LLM: ${res.result} (${res.reason || ""})`);
+          } else {
+            showToast("LLM request failed", "miss");
+          }
+          testBtn.disabled = false;
+          testBtn.textContent = "Test LLM";
+        });
+
+        modal.appendChild(title);
+        modal.appendChild(form);
+        modal.appendChild(testBtn);
+        const footer = document.createElement("div");
+        footer.className = "modal-footer";
+        const closeBtn = document.createElement("button");
+        closeBtn.textContent = "Close";
+        closeBtn.addEventListener("click", () => {
+          closeModal();
+          renderAll();
+        });
+        footer.appendChild(closeBtn);
+        modal.appendChild(footer);
+      });
+    }
+
+    function getSetting(path) {
+      return path.reduce((acc, key) => acc[key], state.settings);
+    }
+
+    function setSetting(path, value) {
+      const parent = path.slice(0, -1).reduce((acc, key) => acc[key], state.settings);
+      parent[path[path.length - 1]] = value;
+    }
+
+    document.getElementById("undoBtn").addEventListener("click", undo);
+    document.getElementById("redoBtn").addEventListener("click", redo);
+    document.getElementById("clearBtn").addEventListener("click", clearBoard);
+    document.getElementById("exportBtn").addEventListener("click", openExportModal);
+    document.getElementById("importBtn").addEventListener("click", openImportModal);
+    document.getElementById("settingsBtn").addEventListener("click", openSettingsModal);
+    paletteSearch.addEventListener("input", renderPalette);
+    modalBackdrop.addEventListener("click", (e) => {
+      if (e.target === modalBackdrop) closeModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey;
+      const isRedo = (e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey));
+      if (isUndo) {
+        e.preventDefault();
+        undo();
+      } else if (isRedo) {
+        e.preventDefault();
+        redo();
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      state.boardTiles.forEach(tile => {
+        tile.x = Math.min(tile.x, boardEl.clientWidth - 120);
+        tile.y = Math.min(tile.y, boardEl.clientHeight - 120);
+      });
+      renderBoard();
+    });
+
+    renderAll();
+
+    // ensure seeds on load
+    DEFAULT_STATE.discovered.forEach(seed => ensureDiscovered(seed));
+    saveState();
+  </script>
+</body>
+</html>
