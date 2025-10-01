@@ -61,7 +61,7 @@
     main {
       flex: 1;
       display: grid;
-      grid-template-columns: 240px 1fr 240px;
+      grid-template-columns: 1fr 240px;
       gap: 1rem;
       padding: 1rem;
       overflow: hidden;
@@ -269,13 +269,6 @@
       <button id="settingsBtn" class="secondary">Settings</button>
     </header>
     <main>
-      <aside>
-        <div class="panel-title">Palette</div>
-        <div class="palette-search">
-          <input id="paletteSearch" type="search" placeholder="Search elements" />
-          <div class="palette-list" id="paletteList"></div>
-        </div>
-      </aside>
       <div class="board-wrapper">
         <div class="panel-title">Board</div>
         <div id="board"></div>
@@ -342,7 +335,7 @@
   "Human+Tree": "Woodcutter",
   
   // === STRUCTURES ===
-  "Stone+Stone": "Wall",
+  "Stone+Stone": "Wall", // kept Wall (removed Wheel)
   "Wall+Tool": "House",
   "Human+House": "Village",
   "Village+Village": "City",
@@ -358,7 +351,6 @@
   "Metal+Tool": "Sword",
   "Metal+Metal": "Steel",
   "Forge+Metal": "Blade",
-  "Stone+Stone": "Wheel",
   
   // === AGRICULTURE & FOOD ===
   "Cooking+Plant": "Food",
@@ -381,13 +373,11 @@
   "Family+Village": "Community",
   
   // === KNOWLEDGE & CULTURE ===
-  "Human+Fire": "Story",
+  // Dropped duplicates: kept earlier definitions
   "Story+Stone": "Art",
   "Story+Tool": "Writing",
   "Writing+House": "Library",
   "Writing+Knowledge": "Book",
-  "Human+Stone": "Sculpture",
-  "Human+Plant": "Garden",
   
   // === NATURAL MATERIALS ===
   "Tree+Tree": "Forest",
@@ -408,7 +398,7 @@
   "Wind+Sand": "Desert",
   
   // === ADVANCED CONCEPTS ===
-  "Fire+Water": "Balance",
+  // Dropped duplicate Fire+Water → kept Steam
   "Life+Death": "Cycle",
   "Human+Star": "Dream",
   "Human+Ocean": "Explorer",
@@ -487,7 +477,9 @@
             content: `You are a creative but disciplined crafting game alchemist.
 When given two element names, propose ONE new element that:
 
-- Must be a meaningful concept from the natural world, basic science, mythology, or everyday objects. 
+- Must be a TANGIBLE, CONCRETE object from nature, everyday life, or physical structures (e.g., "Plant", "Rain", "Algae", "House", "Tool", "Farmer").
+- STRONGLY PREFER physical objects, living things, natural phenomena, tools, buildings, animals, or people over abstract concepts.
+- AVOID abstract concepts like "nourishment", "hydrothermal", "essence", "synergy", "harmony", "balance" unless absolutely necessary.
 - Must be concise (1–2 words), in Title Case (e.g., "Volcano", not "volcano", "emberdust", or "Wallhouse").
 - DO NOT produce simple mashups of the inputs (e.g., "Emberdust", "Wallhouse").
 - DO NOT repeat inputs (e.g., "Ember", "House").
@@ -498,7 +490,9 @@ When given two element names, propose ONE new element that:
   {"result": null, "confidence": 0.0, "reason": "no meaningful combo"}
 
 Respond ONLY with strict JSON:
-{"result":"<NewElementName or null>","confidence":0.0-1.0,"reason":"<short why>"}`
+{"result":"<NewElementName or null>","emoji":"<single emoji>","confidence":0.0-1.0,"reason":"<short why>"}
+
+IMPORTANT: Always include an "emoji" field with a single appropriate emoji that represents the result element.`
           },
           {
             role: "user",
@@ -557,10 +551,11 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
 
     const STORAGE_KEY = "ic_state_v1";
     const RECIPES_KEY = "ic_user_recipes_v1";
+    const EMOJIS_KEY = "ic_user_emojis_v1";
 
     const DEFAULT_STATE = {
       settings: {
-        consumeOnCombine: false,
+        consumeOnCombine: true,
         snapToGrid: true,
         showEmoji: true,
         useLLM: true,
@@ -572,13 +567,14 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
           autoAdd: true
         }
       },
-      discovered: ["Water","Fire","Earth","Air"],
+      discovered: ["Water","Fire","Earth","Wind"],
       boardTiles: [],
       nextId: 1
     };
 
     let state = loadState();
     let userRecipes = loadUserRecipes();
+    let userEmojis = loadUserEmojis();
     let undoStack = [];
     let redoStack = [];
 
@@ -586,7 +582,7 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
       "Water":"💧",
       "Fire":"🔥",
       "Earth":"🌍",
-      "Air":"🌬️",
+      "Wind":"🌬️",
       "Dust":"🌫️",
       "Energy":"⚡",
       "Rain":"🌧️",
@@ -620,13 +616,10 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
     };
 
     const boardEl = document.getElementById("board");
-    const paletteListEl = document.getElementById("paletteList");
     const discoveredListEl = document.getElementById("discoveredList");
     const toastContainer = document.getElementById("toastContainer");
     const modalBackdrop = document.getElementById("modalBackdrop");
     const modalContent = document.getElementById("modalContent");
-
-    const paletteSearch = document.getElementById("paletteSearch");
 
     function loadState() {
       try {
@@ -659,6 +652,16 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
       return {};
     }
 
+    function loadUserEmojis() {
+      try {
+        const stored = localStorage.getItem(EMOJIS_KEY);
+        if (stored) return JSON.parse(stored) || {};
+      } catch (err) {
+        console.error("Failed to load emojis", err);
+      }
+      return {};
+    }
+
     function saveState() {
       const toSave = {
         settings: state.settings,
@@ -668,6 +671,7 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
       localStorage.setItem(RECIPES_KEY, JSON.stringify(userRecipes));
+      localStorage.setItem(EMOJIS_KEY, JSON.stringify(userEmojis));
     }
 
     function structuredClone(obj) {
@@ -677,7 +681,8 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
     function pushUndo() {
       undoStack.push(structuredClone({
         state,
-        userRecipes
+        userRecipes,
+        userEmojis
       }));
       if (undoStack.length > 100) undoStack.shift();
       redoStack = [];
@@ -686,6 +691,7 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
     function restoreSnapshot(snapshot) {
       state = structuredClone(snapshot.state);
       userRecipes = structuredClone(snapshot.userRecipes);
+      userEmojis = structuredClone(snapshot.userEmojis || {});
       renderAll();
       saveState();
     }
@@ -693,14 +699,14 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
     function undo() {
       if (!undoStack.length) return;
       const snapshot = undoStack.pop();
-      redoStack.push(structuredClone({state, userRecipes}));
+      redoStack.push(structuredClone({state, userRecipes, userEmojis}));
       restoreSnapshot(snapshot);
     }
 
     function redo() {
       if (!redoStack.length) return;
       const snapshot = redoStack.pop();
-      undoStack.push(structuredClone({state, userRecipes}));
+      undoStack.push(structuredClone({state, userRecipes, userEmojis}));
       restoreSnapshot(snapshot);
     }
 
@@ -766,7 +772,7 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
 
         const emojiEl = document.createElement("div");
         emojiEl.className = "tile-emoji";
-        emojiEl.textContent = state.settings.showEmoji ? (emojiMap[tile.name] || "✨") : "";
+        emojiEl.textContent = state.settings.showEmoji ? (userEmojis[tile.name] || emojiMap[tile.name] || "✨") : "";
         tileEl.appendChild(emojiEl);
 
         const nameEl = document.createElement("div");
@@ -779,37 +785,32 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
       });
     }
 
-    function renderPalette() {
-      const search = paletteSearch.value.trim().toLowerCase();
-      const all = Array.from(new Set([...DEFAULT_STATE.discovered, ...state.discovered])).sort((a,b)=>a.localeCompare(b));
-      paletteListEl.innerHTML = "";
-      all.filter(name => !search || name.toLowerCase().includes(search)).forEach(name => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = name;
-        btn.addEventListener("click", () => spawnTile(name));
-        paletteListEl.appendChild(btn);
-      });
-    }
-
     function renderDiscovered() {
       discoveredListEl.innerHTML = "";
       state.discovered.sort((a,b) => a.localeCompare(b)).forEach(name => {
         const btn = document.createElement("button");
         btn.type = "button";
+        btn.draggable = true;
+        btn.dataset.element = name;
         const span = document.createElement("span");
         span.textContent = name;
         const emojiSpan = document.createElement("span");
-        emojiSpan.textContent = state.settings.showEmoji ? (emojiMap[name] || "✨") : "";
+        emojiSpan.textContent = state.settings.showEmoji ? (userEmojis[name] || emojiMap[name] || "✨") : "";
         btn.appendChild(span);
         btn.appendChild(emojiSpan);
         btn.addEventListener("click", () => spawnTile(name));
+
+        // Drag from discovered panel to board
+        btn.addEventListener("dragstart", (e) => {
+          e.dataTransfer.effectAllowed = "copy";
+          e.dataTransfer.setData("text/plain", name);
+        });
+
         discoveredListEl.appendChild(btn);
       });
     }
 
     function renderAll() {
-      renderPalette();
       renderDiscovered();
       renderBoard();
     }
@@ -862,6 +863,9 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
       if (fromLLM && state.settings.llm.autoAdd && resultName) {
         const key = keyFor(tileA.name, tileB.name);
         userRecipes[key] = resultName;
+        if (llmData?.emoji) {
+          userEmojis[resultName] = llmData.emoji;
+        }
         saveState();
       }
       const msg = fromLLM && llmData?.reason ? `${resultName} (${llmData.reason})` : `Created ${resultName}`;
@@ -967,7 +971,7 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
         const title = document.createElement("h2");
         title.textContent = "Export State";
         const textarea = document.createElement("textarea");
-        textarea.value = JSON.stringify({state, userRecipes}, null, 2);
+        textarea.value = JSON.stringify({state, userRecipes, userEmojis}, null, 2);
         modal.appendChild(title);
         modal.appendChild(textarea);
         const footer = document.createElement("div");
@@ -999,8 +1003,12 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
             if (parsed.userRecipes) {
               localStorage.setItem(RECIPES_KEY, JSON.stringify(parsed.userRecipes));
             }
+            if (parsed.userEmojis) {
+              localStorage.setItem(EMOJIS_KEY, JSON.stringify(parsed.userEmojis));
+            }
             state = loadState();
             userRecipes = loadUserRecipes();
+            userEmojis = loadUserEmojis();
             undoStack = [];
             redoStack = [];
             renderAll();
@@ -1134,14 +1142,21 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
         footer.className = "modal-footer";
         const resetRecipesBtn = document.createElement("button");
         resetRecipesBtn.type = "button";
-        resetRecipesBtn.textContent = "Reset Recipes";
+        resetRecipesBtn.textContent = "Reset Everything";
         resetRecipesBtn.addEventListener("click", () => {
-          if (!confirm("Reset all custom recipes? This cannot be undone.")) return;
+          if (!confirm("Reset everything to starting state? This cannot be undone.")) return;
           pushUndo();
+          const savedApiKey = state.settings.llm.apiKey;
           userRecipes = {};
+          userEmojis = {};
+          state.discovered = [...DEFAULT_STATE.discovered];
+          state.boardTiles = [];
+          state.settings.llm.apiKey = savedApiKey;
+          undoStack = [];
+          redoStack = [];
           saveState();
           renderAll();
-          showToast("Recipes reset to defaults");
+          showToast("Reset to starting state");
           closeModal();
         });
         footer.appendChild(resetRecipesBtn);
@@ -1171,7 +1186,6 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
     document.getElementById("exportBtn").addEventListener("click", openExportModal);
     document.getElementById("importBtn").addEventListener("click", openImportModal);
     document.getElementById("settingsBtn").addEventListener("click", openSettingsModal);
-    paletteSearch.addEventListener("input", renderPalette);
     modalBackdrop.addEventListener("click", (e) => {
       if (e.target === modalBackdrop) closeModal();
     });
@@ -1194,6 +1208,24 @@ Constraints: keep it concise; avoid proper nouns or copyrighted franchises; no u
         tile.y = Math.min(tile.y, boardEl.clientHeight - 120);
       });
       renderBoard();
+    });
+
+    // Board drag and drop from discovered panel
+    boardEl.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+
+    boardEl.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const elementName = e.dataTransfer.getData("text/plain");
+      if (!elementName) return;
+
+      const boardRect = boardEl.getBoundingClientRect();
+      const x = e.clientX - boardRect.left;
+      const y = e.clientY - boardRect.top;
+
+      spawnTile(elementName, { x, y });
     });
 
     renderAll();
