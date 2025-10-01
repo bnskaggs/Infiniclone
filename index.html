@@ -295,36 +295,155 @@
 
   <script>
     const RECIPES = {
-      "Air+Earth":"Dust",
-      "Air+Fire":"Energy",
-      "Air+Water":"Rain",
-      "Earth+Fire":"Lava",
-      "Lava+Water":"Stone",
-      "Stone+Air":"Sand",
-      "Sand+Fire":"Glass",
-      "Water+Fire":"Steam",
-      "Water+Earth":"Mud",
-      "Rain+Earth":"Plant",
-      "Plant+Fire":"Ash",
-      "Plant+Mud":"Swamp",
-      "Energy+Swamp":"Life",
-      "Life+Stone":"Tool",
-      "Life+Tool":"Human",
-      "Human+Life":"Human Being",
-      "Human+Stone":"Cave",
-      "Human+House":"Village",
-      "Village+Village":"City",
-      "City+Tool":"Civilization",
-      "Human+Tool":"Worker",
-      "Human+Fire":"Cooking",
-      "Cooking+Tool":"Agriculture",
-      "Agriculture+Human":"Farmer",
-      "Life+Energy":"Evolution",
-      "Glass+Energy":"Lightbulb",
-      "Stone+Stone":"Wall",
-      "Wall+Wall":"House",
-      "House+Energy":"Smart Home"
-    };
+  // === FOUNDATION: Basic Elements ===
+  "Water+Fire": "Steam",
+  "Water+Earth": "Mud",
+  "Water+Wind": "Wave",
+  "Fire+Earth": "Lava",
+  "Fire+Wind": "Smoke",
+  "Earth+Wind": "Dust",
+  
+  // === TIER 2: Natural Phenomena ===
+  "Water+Water": "Lake",
+  "Fire+Fire": "Inferno",
+  "Earth+Earth": "Mountain",
+  "Wind+Wind": "Storm",
+  "Lava+Water": "Stone",
+  "Steam+Wind": "Cloud",
+  "Wave+Wind": "Tsunami",
+  "Smoke+Cloud": "Fog",
+  "Dust+Wind": "Sandstorm",
+  "Lake+Lake": "Ocean",
+  "Mountain+Fire": "Volcano",
+  "Stone+Fire": "Metal",
+  "Cloud+Cloud": "Rain",
+  "Rain+Earth": "Plant",
+  "Plant+Water": "Algae",
+  
+  // === LIFE PATH ===
+  "Mud+Plant": "Swamp",
+  "Swamp+Fire": "Energy",
+  "Energy+Swamp": "Life",
+  "Life+Water": "Fish",
+  "Life+Plant": "Tree",
+  "Life+Earth": "Seed",
+  "Life+Fire": "Phoenix",
+  "Life+Stone": "Tool",
+  
+  // === HUMAN PROGRESSION (Core Path) ===
+  "Life+Tool": "Human",
+  "Human+Life": "Human Being",
+  "Human+Stone": "Cave",
+  "Human+Fire": "Cooking",
+  "Human+Plant": "Farmer",
+  "Human+Water": "Fisher",
+  "Human+Tool": "Worker",
+  "Human+Metal": "Smith",
+  "Human+Tree": "Woodcutter",
+  
+  // === STRUCTURES ===
+  "Stone+Stone": "Wall",
+  "Wall+Tool": "House",
+  "Human+House": "Village",
+  "Village+Village": "City",
+  "City+City": "Nation",
+  "House+Fire": "Hearth",
+  "Cave+Fire": "Camp",
+  
+  // === TECHNOLOGY & TOOLS ===
+  "Tool+Tool": "Machine",
+  "Tool+Fire": "Forge",
+  "Tool+Stone": "Hammer",
+  "Tool+Tree": "Axe",
+  "Metal+Tool": "Sword",
+  "Metal+Metal": "Steel",
+  "Forge+Metal": "Blade",
+  "Stone+Stone": "Wheel",
+  
+  // === AGRICULTURE & FOOD ===
+  "Cooking+Plant": "Food",
+  "Cooking+Fish": "Meal",
+  "Cooking+Tool": "Agriculture",
+  "Agriculture+Human": "Civilization",
+  "Seed+Earth": "Farm",
+  "Farm+Tool": "Plow",
+  "Plant+Fire": "Ash",
+  "Tree+Axe": "Wood",
+  "Wood+Fire": "Charcoal",
+  
+  // === CIVILIZATION ADVANCES ===
+  "City+Tool": "Workshop",
+  "City+Knowledge": "University",
+  "Village+Tool": "Market",
+  "Nation+Tool": "Industry",
+  "Human+Human": "Family",
+  "Family+House": "Home",
+  "Family+Village": "Community",
+  
+  // === KNOWLEDGE & CULTURE ===
+  "Human+Fire": "Story",
+  "Story+Stone": "Art",
+  "Story+Tool": "Writing",
+  "Writing+House": "Library",
+  "Writing+Knowledge": "Book",
+  "Human+Stone": "Sculpture",
+  "Human+Plant": "Garden",
+  
+  // === NATURAL MATERIALS ===
+  "Tree+Tree": "Forest",
+  "Plant+Plant": "Meadow",
+  "Stone+Water": "Sand",
+  "Sand+Fire": "Glass",
+  "Clay+Fire": "Brick",
+  "Mud+Fire": "Clay",
+  "Ocean+Fish": "Whale",
+  
+  // === WEATHER & ATMOSPHERE ===
+  "Cloud+Fire": "Lightning",
+  "Lightning+Tree": "Wildfire",
+  "Rain+Rain": "Flood",
+  "Cloud+Cold": "Snow",
+  "Water+Cold": "Ice",
+  "Storm+Ocean": "Hurricane",
+  "Wind+Sand": "Desert",
+  
+  // === ADVANCED CONCEPTS ===
+  "Fire+Water": "Balance",
+  "Life+Death": "Cycle",
+  "Human+Star": "Dream",
+  "Human+Ocean": "Explorer",
+  "Human+Mountain": "Climber",
+  "Time+Human": "Elder",
+  "Knowledge+Tool": "Science",
+  "Science+Fire": "Chemistry",
+  "Science+Life": "Biology",
+  
+  // === MYTHOLOGY & ABSTRACT ===
+  "Fire+Phoenix": "Rebirth",
+  "Storm+Lightning": "Thunder",
+  "Ocean+Storm": "Poseidon",
+  "Mountain+Cloud": "Olympus",
+  "Human+Knowledge": "Sage",
+  "Sage+City": "Philosopher",
+  
+  // === ENERGY & POWER ===
+  "Lightning+Metal": "Electricity",
+  "Electricity+Machine": "Robot",
+  "Fire+Stone": "Coal",
+  "Coal+Machine": "Engine",
+  "Wind+Machine": "Turbine",
+  "Water+Machine": "Mill",
+  
+  // === MISCELLANEOUS USEFUL ===
+  "Ice+Water": "Glacier",
+  "Volcano+Ocean": "Island",
+  "Island+Human": "Castaway",
+  "Forest+Human": "Hunter",
+  "Desert+Human": "Nomad",
+  "Ocean+Wood": "Ship",
+  "Ship+Human": "Sailor",
+  "Sky+Human": "Aviator"
+};
     function keyFor(a,b){ return [a,b].sort().join("+"); }
 
     function normalizeName(name, aName, bName) {
@@ -333,7 +452,9 @@
 
       // Title Case
       clean = clean.replace(/\s+/g, " ");
-      clean = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+      clean = clean.split(' ').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      ).join(' ');
 
       // Reject overly long names
       if (clean.length > 24) return null;
